@@ -1,0 +1,56 @@
+#!/bin/bash
+PSQL="psql --username=freecodecamp --dbname=salon -t --no-align -c"
+
+MAIN() {
+  if [[ $1 ]]
+  then
+    echo -e "\n$1"
+  fi
+
+  SERVICE_ID=$($PSQL "SELECT service_id FROM services;")
+  echo "$SERVICE_ID" | while read ID
+  do
+    SERVICE=$($PSQL "SELECT name FROM services WHERE service_id=$ID;")
+    echo "$ID) $SERVICE"
+  done
+
+  read SERVICE_ID_SELECTED
+
+  if [[ ! $SERVICE_ID_SELECTED =~ ^[0-9]+$ ]]
+  then
+    MAIN "Sorry, you didn't write a valid number."
+
+  else
+    SERVICE_CHOSEN=$($PSQL "SELECT name FROM services WHERE service_id=$SERVICE_ID_SELECTED;")
+    
+    if [[ -z $SERVICE_CHOSEN ]]
+    then
+      MAIN "You didn't chose a valid service."
+    
+    else
+      echo -e "\nGive your phone number:"
+      read CUSTOMER_PHONE
+      CUSTOMER_NAME=$($PSQL "SELECT name FROM customers WHERE phone='$CUSTOMER_PHONE';")
+
+      if [[ -z $CUSTOMER_NAME ]]
+      then
+        echo -e "\nWhat's your name?"
+        read CUSTOMER_NAME
+
+        INSERT_CUSTOMER=$($PSQL "INSERT INTO customers(name, phone) VALUES ('$CUSTOMER_NAME', '$CUSTOMER_PHONE');")
+
+      else
+        echo -e "\nHello $CUSTOMER_NAME"
+      fi
+      echo -e "\nWhen you wanna take this service?"
+      read SERVICE_TIME
+
+      CUSTOMER_ID=$($PSQL "SELECT customer_id FROM customers WHERE name='$CUSTOMER_NAME';")
+      INSERT_APPOINTMENT=$($PSQL "INSERT INTO appointments(customer_id, service_id, time) VALUES ($CUSTOMER_ID, $SERVICE_ID_SELECTED, '$SERVICE_TIME');")
+
+      echo -e "\nI have put you down for a $SERVICE_CHOSEN at $SERVICE_TIME, $CUSTOMER_NAME."
+    fi
+  fi
+}
+
+MAIN "~~~ WELCOME TO SALON SERVICES ~~~\n"
