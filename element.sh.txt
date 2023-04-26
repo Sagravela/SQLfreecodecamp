@@ -1,0 +1,34 @@
+#!/bin/bash
+
+PSQL="psql --username=freecodecamp --dbname=periodic_table -t --no-align -c"
+
+NUMBER_QUERY() {
+  RESPONSE=$($PSQL "SELECT $1 FROM properties NATURAL JOIN elements NATURAL JOIN types WHERE $2=$3;")
+}
+
+STRING_QUERY() {
+  RESPONSE=$($PSQL "SELECT $1 FROM properties NATURAL JOIN elements NATURAL JOIN types WHERE $2='$4' OR $3='$4';")
+}
+
+if [[ -z $1 ]]
+then
+  echo 'Please provide an element as an argument.'
+  exit
+else
+  if [[ $1 =~ [0-9]+ ]]
+  then
+    NUMBER_QUERY '*' 'atomic_number' $1
+  elif [[ $1 =~ [A-Z][a-z]? ]]
+  then
+    STRING_QUERY '*' 'symbol' 'name' $1
+  fi
+fi
+
+if [[ ! -z $RESPONSE ]]
+then
+  IFS="|"
+  read TI AN AM MPC BPC S N T <<< $RESPONSE
+  echo "The element with atomic number $AN is $N ($S). It's a $T, with a mass of $AM amu. $N has a melting point of $MPC celsius and a boiling point of $BPC celsius."
+else
+  echo 'I could not find that element in the database.'
+fi
