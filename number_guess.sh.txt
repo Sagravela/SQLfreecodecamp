@@ -1,0 +1,53 @@
+#!/bin/bash
+PSQL="psql --username=freecodecamp --dbname=number_guess -t --no-align -c"
+RANDOM_NUMBER=$((RANDOM % 1000 + 1))
+#echo $RANDOM_NUMBER
+echo "Enter your username:"
+read USER
+
+DB_USER=$($PSQL "SELECT user_id FROM users WHERE name='$USER';")
+
+if [[ $DB_USER ]]
+then
+  GAMES_PLAYED=$($PSQL "SELECT COUNT(*) FROM games WHERE user_id=$DB_USER;")
+  BEST_GAME=$($PSQL "SELECT MIN(count) FROM games WHERE user_id=$DB_USER;")
+  #REDUNDANT_USER=$($PSQL "SELECT name FROM users WHERE user_id='$DB_USER';")
+  
+  echo "Welcome back, $USER! You have played $GAMES_PLAYED games, and your best game took $BEST_GAME guesses."
+else
+  INSERT_USER=$($PSQL "INSERT INTO users(name) VALUES ('$USER');")
+  DB_USER=$($PSQL "SELECT user_id FROM users WHERE name='$USER';")
+
+  echo "Welcome, $USER! It looks like this is your first time here."
+fi
+
+echo "Guess the secret number between 1 and 1000:"
+read INPUT
+
+PLAY=0
+COUNT=0
+
+while [[ $PLAY == 0 ]]
+do
+  COUNT=$(($COUNT + 1))
+  if [[ $INPUT =~ ^[0-9]+$ ]]
+  then
+    if [[ $INPUT > $RANDOM_NUMBER ]]
+    then
+      echo "It's lower than that, guess again:"
+      read INPUT
+    elif [[ $INPUT < $RANDOM_NUMBER ]]
+    then
+      echo "It's higher than that, guess again:"
+      read INPUT
+    else
+      INSERT_GAME=$($PSQL "INSERT INTO games(user_id, count) VALUES ($DB_USER, $COUNT);")
+      
+      echo "You guessed it in $COUNT tries. The secret number was $RANDOM_NUMBER. Nice job!"
+      PLAY=1
+    fi
+  else
+    echo "That is not an integer, guess again:"
+    read INPUT
+  fi
+done
